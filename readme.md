@@ -11,17 +11,7 @@ Pipeline นี้ทำงานบน Apache Airflow โดยดึงข้�
 
 ## โครงสร้าง Pipeline
 
-```
-[get_fx_data]     [get_cpi_data]     [get_int_data]
-      |                 |                    |
-      +-----------------|--------------------+
-                        ↓
-                  [merge_data]
-                        |
-            +-----------+-----------+
-            ↓                       ↓
-    [load_fx_to_bigquery]   [load_cpi_int_to_bigquery]
-```
+![Thai Economic Indicators Pipeline](images/Pipeline.png)
 
 ## Tasks
 
