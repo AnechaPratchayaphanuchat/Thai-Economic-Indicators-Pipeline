@@ -1,66 +1,105 @@
-# FX Policy CPI Pipeline
+# Thai Economic Indicators Pipeline
 
-Pipeline สำหรับดึงข้อมูลทางเศรษฐกิจจากแหล่งข้อมูลต่างๆ ประมวลผล และโหลดเข้า BigQuery
+## Introduction
 
-## ภาพรวม
+This data pipeline provides comprehensive economic indicators that are essential for understanding Thailand's macroeconomic conditions and making informed financial decisions. The pipeline collects and integrates three critical economic metrics:
 
-Pipeline นี้ทำงานบน Apache Airflow โดยดึงข้อมูลจาก 3 แหล่งหลัก:
-- **อัตราแลกเปลี่ยน (FX)** จากธนาคารแห่งประเทศไทย
-- **ดัชนีราคาผู้บริโภค (CPI)** จากกระทรวงพาณิชย์
-- **อัตราดอกเบี้ย (Interest Rate)** จากธนาคารแห่งประเทศไทย
+- **Foreign Exchange Rates (FX)**: Helps track currency valuation, import/export competitiveness, and foreign investment trends
+- **Consumer Price Index (CPI)**: Measures inflation rates and cost of living changes, crucial for monetary policy decisions and purchasing power analysis
+- **Interest Rates**: Indicates the cost of borrowing and return on savings, affecting investment decisions, loan pricing, and overall economic activity
 
-## โครงสร้าง Pipeline
+This integrated dataset enables:
+
+- **Economic analysts** to monitor macroeconomic trends and relationships between key indicators
+- **Financial institutions** to assess market conditions for lending and investment strategies
+- **Business planners** to forecast costs, pricing strategies, and market conditions
+- **Policy makers** to evaluate the effectiveness of monetary policies
+- **Researchers** to study correlations between exchange rates, inflation, and interest rates
+
+The data reveals important economic relationships, such as how currency fluctuations relate to inflation pressures and how interest rate adjustments impact both currency values and price levels.
+
+---
+
+## Overview
+
+This is an automated data pipeline built on Apache Airflow that extracts economic data from multiple official sources, processes it, and loads it into BigQuery for analysis.
+
+### Data Sources
+
+The pipeline retrieves data from 3 primary sources:
+
+- **Foreign Exchange Rates (FX)** from the Bank of Thailand (BOT)
+- **Consumer Price Index (CPI)** from the Ministry of Commerce (MOC)
+- **Interest Rates** from the Bank of Thailand (BOT)
+
+## Pipeline Architecture
 
 ![Thai Economic Indicators Pipeline](images/Pipeline.png)
 
 ## Tasks
 
 ### 1. get_fx_data
-ดึงข้อมูลอัตราแลกเปลี่ยนสกุล USD จาก BOT API
-- **ช่วงเวลา**: มกราคม 2023 - พฤศจิกายน 2024
+
+Retrieves USD exchange rate data from BOT API
+
+- **Time Period**: January 2023 - November 2024
 - **Output**: `fx_data.parquet`
 - **API Endpoint**: BOT Monthly Average Exchange Rate
 
 ### 2. get_cpi_data
-ดึงข้อมูลดัชนีราคาผู้บริโภค (CPI) จาก MOC API
-- **ช่วงเวลา**: 2023 - 2024
-- **Region**: ทั่วประเทศ (region_id = 5)
+
+Retrieves Consumer Price Index (CPI) data from MOC API
+
+- **Time Period**: 2023 - 2024
+- **Region**: Nationwide (region_id = 5)
 - **Output**: `cpi_data.parquet`
 - **API Endpoint**: MOC CPIU Indexes
 
 ### 3. get_int_data
-ดึงข้อมูลอัตราดอกเบี้ยเฉลี่ยรายเดือนจาก BOT API
-- **ช่วงเวลา**: มกราคม 2023 - พฤศจิกายน 2024
-- **ดัชนี**: MOR, MLR, MRR, Ceiling Rate, Default Rate, Credit Card Rate
+
+Retrieves monthly average interest rate data from BOT API
+
+- **Time Period**: January 2023 - November 2024
+- **Indicators**: MOR, MLR, MRR, Ceiling Rate, Default Rate, Credit Card Rate
 - **Output**: `int_data.parquet`
 - **API Endpoint**: BOT Average Loan Rate
 
 ### 4. merge_data
-รวมข้อมูล CPI และ Interest Rate เข้าด้วยกัน
+
+Merges CPI and Interest Rate data
+
 - **Join Key**: year_month
 - **Output**: `cpi_int_data.parquet`
 
 ### 5. load_fx_to_bigquery
-โหลดข้อมูล FX เข้า BigQuery
+
+Loads FX data into BigQuery
+
 - **Destination**: `DM_PROD.fx_data`
-- **Write Mode**: WRITE_TRUNCATE (เขียนทับข้อมูลเดิม)
+- **Write Mode**: WRITE_TRUNCATE (overwrites existing data)
 
 ### 6. load_cpi_int_to_bigquery
-โหลดข้อมูล CPI + Interest Rate เข้า BigQuery
+
+Loads CPI + Interest Rate data into BigQuery
+
 - **Destination**: `DM_PROD.cpi_int_data`
-- **Write Mode**: WRITE_TRUNCATE (เขียนทับข้อมูลเดิม)
+- **Write Mode**: WRITE_TRUNCATE (overwrites existing data)
 
 ## Configuration
 
 ### API Keys
-ต้องมี API Keys สำหรับเชื่อมต่อกับ BOT API:
+
+API Keys are required to connect to BOT API:
+
 ```python
 FX_API_KEY = "eyJvcmciOi..."
 INT_API_KEY = "eyJvcmciOi..."
 ```
 
 ### Output Paths
-ไฟล์ Parquet จะถูกบันทึกที่:
+
+Parquet files are saved to:
+
 ```python
 fx_output_path = "/home/airflow/gcs/data/fx_data.parquet"
 cpi_output_path = "/home/airflow/gcs/data/cpi_data.parquet"
@@ -69,6 +108,7 @@ cpi_int_output_path = "/home/airflow/gcs/data/cpi_int_data.parquet"
 ```
 
 ### GCS Bucket
+
 ```
 Bucket: us-central1-fxpipeline-908e3388-bucket
 Path: data/
@@ -77,28 +117,30 @@ Path: data/
 ## Data Schema
 
 ### fx_data
-| Column | Type | Description |
-|--------|------|-------------|
-| period | string | รอบเดือน (YYYY-MM) |
-| currency_id | string | รหัสสกุลเงิน |
-| avg_rate | float | อัตราแลกเปลี่ยนเฉลี่ย |
+
+| Column      | Type   | Description            |
+| ----------- | ------ | ---------------------- |
+| period      | string | Month period (YYYY-MM) |
+| currency_id | string | Currency code          |
+| avg_rate    | float  | Average exchange rate  |
 
 ### cpi_int_data
-| Column | Type | Description |
-|--------|------|-------------|
-| base_year | string | ปีฐาน |
-| price_index | float | ดัชนีราคา |
-| mon | float | % เปลี่ยนแปลงเทียบเดือนก่อน |
-| yoy | float | % เปลี่ยนแปลงเทียบปีก่อน |
-| aoa | float | % เปลี่ยนแปลงเฉลี่ย |
-| year_month | string | รอบเดือน (YYYY-MM) |
-| mor | float | MOR (Maximum Overdraft Rate) |
-| mlr | float | MLR (Minimum Loan Rate) |
-| mrr | float | MRR (Minimum Retail Rate) |
-| ceiling_rate | float | อัตราดอกเบี้ยสูงสุด |
-| default_rate | float | อัตราดอกเบี้ยผิดนัด |
-| creditcard_min | float | อัตราดอกเบี้ยบัตรเครดิตต่ำสุด |
-| creditcard_max | float | อัตราดอกเบี้ยบัตรเครดิตสูงสุด |
+
+| Column         | Type   | Description                  |
+| -------------- | ------ | ---------------------------- |
+| base_year      | string | Base year                    |
+| price_index    | float  | Price index                  |
+| mon            | float  | % change from previous month |
+| yoy            | float  | % change from previous year  |
+| aoa            | float  | Average % change             |
+| year_month     | string | Month period (YYYY-MM)       |
+| mor            | float  | MOR (Maximum Overdraft Rate) |
+| mlr            | float  | MLR (Minimum Loan Rate)      |
+| mrr            | float  | MRR (Minimum Retail Rate)    |
+| ceiling_rate   | float  | Maximum interest rate        |
+| default_rate   | float  | Default interest rate        |
+| creditcard_min | float  | Minimum credit card rate     |
+| creditcard_max | float  | Maximum credit card rate     |
 
 ## Requirements
 
@@ -116,29 +158,30 @@ pyarrow
 
 ## Schedule
 
-- **Schedule**: `@once` (รันครั้งเดียว)
-- **Start Date**: 1 วันที่แล้ว
+- **Schedule**: `@once` (runs once)
+- **Start Date**: 1 day ago
 
-## การใช้งาน
+## Usage
 
-1. ตรวจสอบว่ามี API Keys ที่ถูกต้อง
-2. ตรวจสอบ GCS bucket และ BigQuery dataset
-3. Trigger DAG ใน Airflow UI
-4. ตรวจสอบ logs ของแต่ละ task
-5. ตรวจสอบข้อมูลใน BigQuery
+1. Verify that you have the correct API Keys
+2. Check GCS bucket and BigQuery dataset
+3. Trigger the DAG in Airflow UI
+4. Monitor logs for each task
+5. Verify data in BigQuery
 
 ## Error Handling
 
-Pipeline มีการจัดการ error ดังนี้:
-- Request timeout: 30 วินาที
-- SSL verification: ปิดการใช้งาน (verify=False)
-- API rate limiting: หน่วงเวลา 1 วินาทีระหว่างการเรียก API
-- Data validation: ตรวจสอบข้อมูลก่อน save
+The pipeline includes error handling for:
+
+- Request timeout: 30 seconds
+- SSL verification: Disabled (verify=False)
+- API rate limiting: 1 second delay between API calls
+- Data validation: Validates data before saving
 
 ## Dashboard
 
-ได้มีการนำข้อมูลที่ได้จาก Pipeline ไปสร้าง Dashboard เพื่อแสดงผลข้อมูลเศรษฐกิจไทย ดังนี้:
+The data from this pipeline has been used to create a dashboard displaying Thai economic indicators:
 
 ![Thai Economic Indicators Dashboard](images/2025-11-24_094959.png)
 
-Dashboard นี้ชี้ให้เห็นความเชื่อมโยงของค่าเงิน เงินเฟ้อ และอัตราดอกเบี้ยในระบบเศรษฐกิจ โดยค่าเงินบาทมีความผันผวนตามสภาวะตลาด ขณะที่ CPI สะท้อนภาวะค่าครองชีพที่เปลี่ยนไป และอัตราดอกเบี้ยมีบทบาทสำคัญต่อทิศทางเงินทุนและ FX การดูความผันผวน รูปแบบตามฤดูกาล การกระจายผลตอบแทน และความสัมพันธ์ระหว่างตัวแปรทั้งหมด ช่วยให้เข้าใจกลไกเศรษฐกิจได้ครบด้านมากขึ้น รวมถึงมองเห็นว่าค่าเงินบาท หลังหักเงินเฟ้อเคลื่อนไหวไปในทิศทางที่ใกล้เคียงกับสภาวะเศรษฐกิจพื้นฐาน
+This dashboard illustrates the interconnections between currency values, inflation, and interest rates in the economic system. The Thai Baht shows volatility based on market conditions, while CPI reflects changes in the cost of living, and interest rates play a crucial role in capital flows and FX markets. By analyzing volatility, seasonal patterns, return distributions, and correlations between all variables, we gain a more comprehensive understanding of economic mechanisms. This includes observing how the Thai Baht, adjusted for inflation, moves in a direction closely aligned with fundamental economic conditions.
