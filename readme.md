@@ -38,6 +38,10 @@ The pipeline retrieves data from 3 primary sources:
 
 ## Tasks
 
+### Airflow Directed Acyclic Graphs (DAG)
+
+![Thai Economic Indicators Pipeline](images/DAG.png)
+
 ### 1. get_fx_data
 
 Retrieves USD exchange rate data from BOT API
